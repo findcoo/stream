@@ -18,7 +18,7 @@ type (
 type Observer struct {
 	err           chan error
 	cancel        chan struct{}
-	doneSubscribe chan struct{}
+	DoneSubscribe chan struct{}
 	doneObserv    chan struct{}
 	Handler       Handler
 }
@@ -37,7 +37,7 @@ func NewObserver() *Observer {
 		doneObserv:    make(chan struct{}, 1),
 		err:           make(chan error, 1),
 		cancel:        make(chan struct{}, 1),
-		doneSubscribe: make(chan struct{}, 1),
+		DoneSubscribe: make(chan struct{}, 1),
 		Handler: Handler{
 			Observable: func() {},
 			AtComplete: func() {},
@@ -62,11 +62,11 @@ func (o *Observer) Observ() {
 			select {
 			case state := <-sig:
 				log.Printf("capture signal: %s: end observ", state)
-				o.doneSubscribe <- struct{}{}
+				o.DoneSubscribe <- struct{}{}
 				return
 			case <-o.doneObserv:
 				o.Handler.AtComplete()
-				o.doneSubscribe <- struct{}{}
+				o.DoneSubscribe <- struct{}{}
 				break ObservLoop
 			case err := <-o.err:
 				o.Handler.AtError(err)

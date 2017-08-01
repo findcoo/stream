@@ -34,7 +34,7 @@ func (bs *BytesStream) Subscribe(callArray ...func([]byte)) {
 SubLoop:
 	for {
 		select {
-		case <-bs.Observer.doneSubscribe:
+		case <-bs.Observer.DoneSubscribe:
 			break SubLoop
 		case data := <-bs.stream:
 			if len(callArray) != 0 {
