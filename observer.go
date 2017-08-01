@@ -20,30 +20,26 @@ type Observer struct {
 	cancel        chan struct{}
 	DoneSubscribe chan struct{}
 	doneObserv    chan struct{}
-	Handler       Handler
+	Handler       ObservHandler
+	Observable    StateFunc
 }
 
-// Handler Observer의 상태 변화에 따라 실행될 핸들러
-type Handler struct {
-	Observable StateFunc
+// ObservHandler Observer의 상태 변화에 따라 실행될 핸들러
+type ObservHandler struct {
 	AtComplete StateFunc
 	AtCancel   StateFunc
 	AtError    ErrFunc
 }
 
 // NewObserver Observer 생성
-func NewObserver() *Observer {
+func NewObserver(handler ObservHandler) *Observer {
 	obv := &Observer{
 		doneObserv:    make(chan struct{}, 1),
 		err:           make(chan error, 1),
 		cancel:        make(chan struct{}, 1),
 		DoneSubscribe: make(chan struct{}, 1),
-		Handler: Handler{
-			Observable: func() {},
-			AtComplete: func() {},
-			AtCancel:   func() {},
-			AtError:    func(err error) {},
-		},
+		Handler:       handler,
+		Observable:    func() {},
 	}
 
 	return obv
@@ -55,7 +51,7 @@ func (o *Observer) Observ() {
 	signal.Notify(sig, os.Interrupt, os.Kill, syscall.SIGTERM)
 
 	go func() {
-		go o.Handler.Observable()
+		go o.Observable()
 
 	ObservLoop:
 		for {
@@ -73,6 +69,11 @@ func (o *Observer) Observ() {
 			}
 		}
 	}()
+}
+
+// SetObservable 감시 대상 함수를 설정한다.
+func (o *Observer) SetObservable(call StateFunc) {
+	o.Observable = call
 }
 
 // OnComplete Observer의 활동을 끝낸다.

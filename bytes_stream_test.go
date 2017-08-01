@@ -7,13 +7,19 @@ import (
 )
 
 func TestBytesStream(t *testing.T) {
-	stream := NewByteStream()
-	stream.Observer.Handler.Observable = func() {
+	handler := ObservHandler{
+		AtCancel:   func() {},
+		AtComplete: func() {},
+		AtError:    func(error) {},
+	}
+
+	stream := NewByteStream(handler)
+	stream.Observer.SetObservable(func() {
 		for i := 0; i <= 10; i++ {
 			stream.Send([]byte{byte(i)})
 		}
 		stream.Observer.OnComplete()
-	}
+	})
 
 	stream.Publish().Subscribe(func(data []byte) {
 		log.Print(data)
@@ -21,26 +27,28 @@ func TestBytesStream(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	stream := NewByteStream()
-	stream.Observer.Handler = Handler{
-		Observable: func() {
-			for i := 0; i <= 1000; i++ {
-				select {
-				case <-stream.Observer.AfterCancel():
-					return
-				default:
-					stream.Send([]byte(strconv.Itoa(i)))
-				}
-			}
-			stream.Observer.OnComplete()
-		},
+	handler := ObservHandler{
 		AtCancel:   func() {},
 		AtComplete: func() {},
+		AtError:    func(error) {},
 	}
 
-	var i int
+	stream := NewByteStream(handler)
+	stream.Observer.SetObservable(func() {
+		for i := 0; i <= 100; i++ {
+			select {
+			case <-stream.Observer.AfterCancel():
+				return
+			default:
+				stream.Send([]byte(strconv.Itoa(i)))
+			}
+		}
+		stream.Observer.OnComplete()
+	})
+
+	stream.Cancel()
+
 	stream.Publish().Subscribe(func(data []byte) {
-		log.Print(string(data))
-		i++
+		t.Fail()
 	})
 }

@@ -2,16 +2,16 @@ package stream
 
 // BytesStream  byte데이터만 흐르는 stream
 type BytesStream struct {
-	stream       chan []byte
-	Observer     *Observer
-	Subscribable func(data []byte)
+	stream      chan []byte
+	Observer    *Observer
+	AtSubscribe func(data []byte)
 }
 
 // NewByteStream ByteStream 생성
-func NewByteStream() *BytesStream {
+func NewByteStream(handler ObservHandler) *BytesStream {
 	bs := &BytesStream{
 		stream:   make(chan []byte, 1),
-		Observer: NewObserver(),
+		Observer: NewObserver(handler),
 	}
 
 	return bs
@@ -30,20 +30,18 @@ func (bs *BytesStream) Publish() *BytesStream {
 }
 
 // Subscribe 데이터를 구독
-func (bs *BytesStream) Subscribe(callArray ...func([]byte)) {
+func (bs *BytesStream) Subscribe(call func([]byte)) {
+	if call != nil {
+		bs.AtSubscribe = call
+	}
+
 SubLoop:
 	for {
 		select {
 		case <-bs.Observer.DoneSubscribe:
 			break SubLoop
 		case data := <-bs.stream:
-			if len(callArray) != 0 {
-				for _, call := range callArray {
-					call(data)
-				}
-			} else {
-				bs.Subscribable(data)
-			}
+			bs.AtSubscribe(data)
 		}
 	}
 }
