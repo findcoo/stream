@@ -40,7 +40,11 @@ func (ps *ProducerStream) Send(data *sarama.ProducerMessage) {
 }
 
 // Publish Observable의 데이터를 구독한 후 broker로 메세지를 전송한다.
-func (ps *ProducerStream) Publish(callArray ...func(*sarama.ProducerMessage)) {
+func (ps *ProducerStream) Publish(call func(*sarama.ProducerMessage)) {
+	if call != nil {
+		ps.AtSubscribe = call
+	}
+
 	ps.Observer.Observ()
 
 	// NOTE Observable 구독 루프
@@ -50,13 +54,7 @@ SubLoop:
 		case <-ps.Observer.DoneSubscribe:
 			break SubLoop
 		case data := <-ps.stream:
-			if len(callArray) != 0 {
-				for _, call := range callArray {
-					call(data)
-				}
-			} else {
-				ps.AtSubscribe(data)
-			}
+			ps.AtSubscribe(data)
 
 			select {
 			case ps.producer.Input() <- data:
