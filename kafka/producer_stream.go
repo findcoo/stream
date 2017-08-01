@@ -34,20 +34,16 @@ func NewProducerStream(addr string) *ProducerStream {
 	return ps
 }
 
-// Send ProducerMessage를 broker로 보낸다.
+// Send ProducerMessage를 Subscribable에 전달
 func (ps *ProducerStream) Send(data *sarama.ProducerMessage) {
 	ps.stream <- data
 }
 
-// Publish stream 시작하고 stream을 반환한다.
-func (ps *ProducerStream) Publish() *ProducerStream {
+// Publish Observable의 데이터를 구독한 후 broker로 메세지를 전송한다.
+func (ps *ProducerStream) Publish(callArray ...func(*sarama.ProducerMessage)) {
 	ps.Observer.Observ()
 
-	return ps
-}
-
-// Subscribe 데이터 구독
-func (ps *ProducerStream) Subscribe(callArray ...func(*sarama.ProducerMessage)) {
+	// NOTE Observable 구독 루프
 SubLoop:
 	for {
 		select {
@@ -60,7 +56,12 @@ SubLoop:
 				}
 			} else {
 				ps.Subscribable(data)
-				ps.producer.Input() <- data
+			}
+
+			select {
+			case ps.producer.Input() <- data:
+			case err := <-ps.producer.Errors():
+				log.Println("Failed to produce message", err)
 			}
 		}
 	}
