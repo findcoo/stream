@@ -9,14 +9,14 @@ import (
 
 // ProducerStream sarama AsyncProducer를 이용한 stream 구조체
 type ProducerStream struct {
-	stream       chan *sarama.ProducerMessage
-	producer     sarama.AsyncProducer
-	Observer     *stream.Observer
-	Subscribable func(*sarama.ProducerMessage)
+	stream      chan *sarama.ProducerMessage
+	producer    sarama.AsyncProducer
+	Observer    *stream.Observer
+	AtSubscribe func(*sarama.ProducerMessage)
 }
 
 // NewProducerStream stream 생성
-func NewProducerStream(addr string) *ProducerStream {
+func NewProducerStream(addr string, handler stream.ObservHandler) *ProducerStream {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 
@@ -28,7 +28,7 @@ func NewProducerStream(addr string) *ProducerStream {
 	ps := &ProducerStream{
 		stream:   make(chan *sarama.ProducerMessage, 1),
 		producer: p,
-		Observer: stream.NewObserver(),
+		Observer: stream.NewObserver(handler),
 	}
 
 	return ps
@@ -55,7 +55,7 @@ SubLoop:
 					call(data)
 				}
 			} else {
-				ps.Subscribable(data)
+				ps.AtSubscribe(data)
 			}
 
 			select {
