@@ -7,18 +7,39 @@ import (
 	"github.com/findcoo/stream"
 )
 
+// ProceedMessageHandler 메세지가 broker로 전달된 후 실행되는 핸들러
+type ProceedMessageHandler func(*sarama.ProducerMessage)
+
 // ProducerStream sarama AsyncProducer를 이용한 stream 구조체
 type ProducerStream struct {
-	stream      chan *sarama.ProducerMessage
-	producer    sarama.AsyncProducer
-	Observer    *stream.Observer
-	AtSubscribe func(*sarama.ProducerMessage)
+	stream   chan *sarama.ProducerMessage
+	producer sarama.AsyncProducer
+	Observer *stream.Observer
+	Handler  ProduceHandler
+}
+
+// ProduceHandler producer 활동중 실행되는 핸들러들
+type ProduceHandler struct {
+	AfterSend ProceedMessageHandler
+	ErrFrom   stream.ErrHandler
+}
+
+// DefaultProduceHandler 기본 핸들러 설정
+func DefaultProduceHandler() *ProduceHandler {
+	return &ProduceHandler{
+		AfterSend: func(*sarama.ProducerMessage) {},
+		ErrFrom:   func(error) {},
+	}
 }
 
 // NewProducerStream stream 생성
-func NewProducerStream(addr string, handler stream.ObservHandler) *ProducerStream {
+func NewProducerStream(addr string, handler *ProduceHandler, obvHandler *stream.ObservHandler) *ProducerStream {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
+
+	if handler == nil {
+		handler = DefaultProduceHandler()
+	}
 
 	p, err := sarama.NewAsyncProducer([]string{addr}, config)
 	if err != nil {
@@ -28,23 +49,20 @@ func NewProducerStream(addr string, handler stream.ObservHandler) *ProducerStrea
 	ps := &ProducerStream{
 		stream:   make(chan *sarama.ProducerMessage, 1),
 		producer: p,
-		Observer: stream.NewObserver(handler),
+		Observer: stream.NewObserver(obvHandler),
+		Handler:  *handler,
 	}
 
 	return ps
 }
 
 // Send ProducerMessage를 Subscribable에 전달
-func (ps *ProducerStream) Send(data *sarama.ProducerMessage) {
-	ps.stream <- data
+func (ps *ProducerStream) Send(msg *sarama.ProducerMessage) {
+	ps.stream <- msg
 }
 
 // Publish Observable의 데이터를 구독한 후 broker로 메세지를 전송한다.
-func (ps *ProducerStream) Publish(call func(*sarama.ProducerMessage)) {
-	if call != nil {
-		ps.AtSubscribe = call
-	}
-
+func (ps *ProducerStream) Publish() {
 	ps.Observer.Observ()
 
 	// NOTE Observable 구독 루프
@@ -53,13 +71,12 @@ SubLoop:
 		select {
 		case <-ps.Observer.DoneSubscribe:
 			break SubLoop
-		case data := <-ps.stream:
-			ps.AtSubscribe(data)
-
+		case msg := <-ps.stream:
 			select {
-			case ps.producer.Input() <- data:
+			case ps.producer.Input() <- msg:
+				ps.Handler.AfterSend(msg)
 			case err := <-ps.producer.Errors():
-				log.Println("Failed to produce message", err)
+				ps.Handler.ErrFrom(err)
 			}
 		}
 	}

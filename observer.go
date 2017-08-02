@@ -8,10 +8,10 @@ import (
 )
 
 type (
-	// StateFunc 상태 변화에 호출되는 함수 형태
-	StateFunc func()
-	// ErrFunc error 예외처리를 하는 함수 형태
-	ErrFunc func(error)
+	// StateHandler 상태 변화에 호출되는 함수 형태
+	StateHandler func()
+	// ErrHandler error 예외처리를 하는 함수 형태
+	ErrHandler func(error)
 )
 
 // Observer Status를 모니터링하는 관찰자 객체
@@ -21,24 +21,44 @@ type Observer struct {
 	DoneSubscribe chan struct{}
 	doneObserv    chan struct{}
 	Handler       ObservHandler
-	Observable    StateFunc
+	Observable    StateHandler
 }
 
 // ObservHandler Observer의 상태 변화에 따라 실행될 핸들러
 type ObservHandler struct {
-	AtComplete StateFunc
-	AtCancel   StateFunc
-	AtError    ErrFunc
+	AtComplete StateHandler
+	AtCancel   StateHandler
+	AtError    ErrHandler
+}
+
+// DefaultObservHandler 기본 핸들러 설정
+func DefaultObservHandler() *ObservHandler {
+	return &ObservHandler{
+		AtComplete: func() {},
+		AtCancel:   func() {},
+		AtError:    func(error) {},
+	}
+}
+
+// AfterSignal process의 종료을 뜻하는 모든 os signal, system call을 감시
+func AfterSignal() chan os.Signal {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, os.Kill, syscall.SIGTERM)
+	return sig
 }
 
 // NewObserver Observer 생성
-func NewObserver(handler ObservHandler) *Observer {
+func NewObserver(handler *ObservHandler) *Observer {
+	if handler == nil {
+		handler = DefaultObservHandler()
+	}
+
 	obv := &Observer{
 		doneObserv:    make(chan struct{}, 1),
 		err:           make(chan error, 1),
 		cancel:        make(chan struct{}, 1),
 		DoneSubscribe: make(chan struct{}, 1),
-		Handler:       handler,
+		Handler:       *handler,
 		Observable:    func() {},
 	}
 
@@ -47,8 +67,7 @@ func NewObserver(handler ObservHandler) *Observer {
 
 // Observ 대상 핸들러를 관찰한다.
 func (o *Observer) Observ() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, os.Kill, syscall.SIGTERM)
+	sig := AfterSignal()
 
 	go func() {
 		go o.Observable()
@@ -72,7 +91,7 @@ func (o *Observer) Observ() {
 }
 
 // SetObservable 감시 대상 함수를 설정한다.
-func (o *Observer) SetObservable(call StateFunc) {
+func (o *Observer) SetObservable(call StateHandler) {
 	o.Observable = call
 }
 
@@ -90,7 +109,6 @@ func (o *Observer) OnError(err error) {
 // Cancel Observ 활동을 취소시킨다.
 // NOTE Observ의 종료와 동시에 Subscribe도 종료된다.
 // NOTE Cancel시에 데이터를 완전히 보장하지 않고, 바로 종료시킨다.
-// Observable 에서 return과 동반
 func (o *Observer) Cancel() {
 	o.cancel <- struct{}{}
 	o.Handler.AtCancel()

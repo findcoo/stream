@@ -7,7 +7,7 @@ import (
 )
 
 func TestBytesStream(t *testing.T) {
-	handler := ObservHandler{
+	handler := &ObservHandler{
 		AtCancel:   func() {},
 		AtComplete: func() {},
 		AtError:    func(error) {},
@@ -27,7 +27,7 @@ func TestBytesStream(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	handler := ObservHandler{
+	handler := &ObservHandler{
 		AtCancel:   func() {},
 		AtComplete: func() {},
 		AtError:    func(error) {},

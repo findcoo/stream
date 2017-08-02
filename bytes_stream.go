@@ -8,7 +8,7 @@ type BytesStream struct {
 }
 
 // NewByteStream ByteStream 생성
-func NewByteStream(handler ObservHandler) *BytesStream {
+func NewByteStream(handler *ObservHandler) *BytesStream {
 	bs := &BytesStream{
 		stream:   make(chan []byte, 1),
 		Observer: NewObserver(handler),

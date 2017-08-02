@@ -2,19 +2,15 @@ package kafka
 
 import (
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
+	"github.com/findcoo/stream"
 )
 
 type (
-	// MessageHandler consumer가 메세지를 받을때, 실행된다.
-	MessageHandler func(*sarama.ConsumerMessage) *sarama.ConsumerMessage
-	// ErrorHandler consumer가 broker로 부터 err 응답을 받을때, 실행
-	ErrorHandler func(error)
+	// ConsumedMessageHandler consumer가 메세지를 받을때, 실행된다.
+	ConsumedMessageHandler func(*sarama.ConsumerMessage)
 	// NotificationHandler consumer가 broker로 부터 알림을 받을때, 실행
 	NotificationHandler func(*cluster.Notification)
 )
@@ -28,16 +24,29 @@ type ConsumerGroup struct {
 
 // ConsumHandler consum 이벤트에 맞춰 실행될 핸들러
 type ConsumHandler struct {
-	AtSubscribe MessageHandler
-	AtError     ErrorHandler
+	AtSubscribe ConsumedMessageHandler
+	AtError     stream.ErrHandler
 	AtNotified  NotificationHandler
 }
 
+// DefaultConsumHandler 기본 핸들러 생성
+func DefaultConsumHandler() *ConsumHandler {
+	return &ConsumHandler{
+		AtSubscribe: func(*sarama.ConsumerMessage) {},
+		AtNotified:  func(*cluster.Notification) {},
+		AtError:     func(error) {},
+	}
+}
+
 // NewConsumerGroup consumer group 생성
-func NewConsumerGroup(groupName string, addrs, topics []string, handler ConsumHandler) *ConsumerGroup {
+func NewConsumerGroup(groupName string, addrs, topics []string, handler *ConsumHandler) *ConsumerGroup {
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
 	config.Group.Return.Notifications = true
+
+	if handler == nil {
+		handler = DefaultConsumHandler()
+	}
 
 	c, err := cluster.NewConsumer(addrs, groupName, topics, config)
 	if err != nil {
@@ -48,16 +57,15 @@ func NewConsumerGroup(groupName string, addrs, topics []string, handler ConsumHa
 	cg := &ConsumerGroup{
 		cancel:   make(chan struct{}, 1),
 		consumer: c,
-		Handler:  handler,
+		Handler:  *handler,
 	}
 
 	return cg
 }
 
 // Subscribe broker로 부터 메세지를 구독한다.
-func (cg *ConsumerGroup) Subscribe(call MessageHandler) {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, os.Kill, syscall.SIGTERM)
+func (cg *ConsumerGroup) Subscribe(call ConsumedMessageHandler) {
+	sig := stream.AfterSignal()
 
 	if call != nil {
 		cg.Handler.AtSubscribe = call
