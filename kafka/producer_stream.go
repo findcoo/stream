@@ -33,7 +33,7 @@ func DefaultProduceHandler() *ProduceHandler {
 }
 
 // NewProducerStream stream 생성
-func NewProducerStream(addr string, handler *ProduceHandler, obvHandler *stream.ObservHandler) *ProducerStream {
+func NewProducerStream(addrs []string, handler *ProduceHandler, obvHandler *stream.ObservHandler) *ProducerStream {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 
@@ -41,7 +41,7 @@ func NewProducerStream(addr string, handler *ProduceHandler, obvHandler *stream.
 		handler = DefaultProduceHandler()
 	}
 
-	p, err := sarama.NewAsyncProducer([]string{addr}, config)
+	p, err := sarama.NewAsyncProducer(addrs, config)
 	if err != nil {
 		log.Fatal(err)
 	}

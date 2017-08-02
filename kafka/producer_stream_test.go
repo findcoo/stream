@@ -15,7 +15,7 @@ func TestProducer(t *testing.T) {
 		ErrFrom: func(error) {},
 	}
 
-	p := NewProducerStream("127.0.0.1:9092", h, nil)
+	p := NewProducerStream([]string{"127.0.0.1:9092"}, h, nil)
 	p.Observer.SetObservable(func() {
 		for i := 0; i <= 10; i++ {
 			msg := &sarama.ProducerMessage{
