@@ -7,8 +7,8 @@ type BytesStream struct {
 	AtSubscribe func(data []byte)
 }
 
-// NewByteStream ByteStream 생성
-func NewByteStream(handler *ObservHandler) *BytesStream {
+// NewBytesStream ByteStream 생성
+func NewBytesStream(handler *ObservHandler) *BytesStream {
 	bs := &BytesStream{
 		stream:   make(chan []byte, 1),
 		Observer: NewObserver(handler),

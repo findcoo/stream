@@ -13,7 +13,7 @@ func TestBytesStream(t *testing.T) {
 		AtError:    func(error) {},
 	}
 
-	stream := NewByteStream(handler)
+	stream := NewBytesStream(handler)
 	stream.Observer.SetObservable(func() {
 		for i := 0; i <= 10; i++ {
 			stream.Send([]byte{byte(i)})
@@ -33,7 +33,7 @@ func TestCancel(t *testing.T) {
 		AtError:    func(error) {},
 	}
 
-	stream := NewByteStream(handler)
+	stream := NewBytesStream(handler)
 	stream.Observer.SetObservable(func() {
 		for i := 0; i <= 100; i++ {
 			select {
