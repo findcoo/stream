@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+ zoo1:
+  image: findcoo/kafkalab:v1.0.1
+  command: ["make", "zoo.stage"]
+  
+ broker1:
+  image: findcoo/kafkalab:v1.0.1
+  ports:
+   - 9092:9092
+  command: ["make", "broker.stage"]  

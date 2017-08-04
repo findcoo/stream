@@ -19,6 +19,7 @@ func NewBytesStream(handler *ObservHandler) *BytesStream {
 
 // Send 데이터를 전송한다.
 func (bs *BytesStream) Send(data []byte) {
+	bs.Observer.WG.Add(1)
 	bs.stream <- data
 }
 
@@ -42,6 +43,7 @@ SubLoop:
 			break SubLoop
 		case data := <-bs.stream:
 			bs.AtSubscribe(data)
+			bs.Observer.WG.Done()
 		}
 	}
 }

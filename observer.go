@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -22,6 +23,7 @@ type Observer struct {
 	doneObserv    chan struct{}
 	Handler       ObservHandler
 	Observable    StateHandler
+	WG            sync.WaitGroup
 }
 
 // ObservHandler Observer의 상태 변화에 따라 실행될 핸들러
@@ -77,11 +79,11 @@ func (o *Observer) Observ() {
 			select {
 			case state := <-sig:
 				log.Printf("capture signal: %s: end observ", state)
-				o.DoneSubscribe <- struct{}{}
+				o.endSubscribe()
 				return
 			case <-o.doneObserv:
 				o.Handler.AtComplete()
-				o.DoneSubscribe <- struct{}{}
+				o.endSubscribe()
 				break ObservLoop
 			case err := <-o.err:
 				o.Handler.AtError(err)
@@ -118,4 +120,9 @@ func (o *Observer) Cancel() {
 // AfterCancel Observable을 취소하기 위한 메소드
 func (o *Observer) AfterCancel() <-chan struct{} {
 	return o.cancel
+}
+
+func (o *Observer) endSubscribe() {
+	o.WG.Wait()
+	o.DoneSubscribe <- struct{}{}
 }
