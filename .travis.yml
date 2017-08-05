@@ -12,11 +12,11 @@ services:
  - docker
 
 before_install:
+ - make run.kafka
  - curl https://glide.sh/get | sh
 
 install: make install
 
 script: 
- - make run.kafka
  - make test
  - go build
