@@ -9,8 +9,6 @@ import (
 )
 
 func TestProduce(t *testing.T) {
-	t.Parallel()
-
 	h := &ProduceHandler{
 		AfterSend: func(msg *sarama.ProducerMessage) {
 			log.Print(msg)
@@ -47,8 +45,6 @@ func TestProduce(t *testing.T) {
 }
 
 func TestConsume(t *testing.T) {
-	t.Parallel()
-
 	h := DefaultConsumHandler()
 	h.AtError = func(err error) {
 		log.Print(err)
@@ -65,10 +61,3 @@ func TestConsume(t *testing.T) {
 		}
 	})
 }
-
-/*
-func TestKafka(t *testing.T) {
-	t.Run("test consume", TestConsume)
-	t.Run("test produce", TestProduce)
-}
-*/
