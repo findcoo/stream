@@ -35,6 +35,7 @@ func DefaultProduceHandler() *ProduceHandler {
 // NewProducerStream stream 생성
 func NewProducerStream(addrs []string, handler *ProduceHandler, obvHandler *stream.ObservHandler) *ProducerStream {
 	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
 	config.Producer.RequiredAcks = sarama.WaitForAll
 
 	if handler == nil {
@@ -58,6 +59,7 @@ func NewProducerStream(addrs []string, handler *ProduceHandler, obvHandler *stre
 
 // Send ProducerMessage를 Subscribable에 전달
 func (ps *ProducerStream) Send(msg *sarama.ProducerMessage) {
+	ps.Observer.WG.Add(1)
 	ps.stream <- msg
 }
 
@@ -65,19 +67,18 @@ func (ps *ProducerStream) Send(msg *sarama.ProducerMessage) {
 func (ps *ProducerStream) Publish() {
 	ps.Observer.Observ()
 
-	// NOTE Observable 구독 루프
 SubLoop:
 	for {
 		select {
+		case msg := <-ps.stream:
+			ps.producer.Input() <- msg
+			ps.Handler.AfterSend(msg)
+		case <-ps.producer.Successes():
+			ps.Observer.WG.Done()
+		case err := <-ps.producer.Errors():
+			ps.Handler.ErrFrom(err)
 		case <-ps.Observer.DoneSubscribe:
 			break SubLoop
-		case msg := <-ps.stream:
-			select {
-			case ps.producer.Input() <- msg:
-				ps.Handler.AfterSend(msg)
-			case err := <-ps.producer.Errors():
-				ps.Handler.ErrFrom(err)
-			}
 		}
 	}
 }
