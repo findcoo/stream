@@ -1,14 +1,11 @@
-package kafka
+# kafka
+improve kafka's reactivity
 
-import (
-	"log"
-	"strconv"
-	"testing"
+* Producer
 
-	"github.com/Shopify/sarama"
-)
-
-func TestProduce(t *testing.T) {
+  observer watch the Observable and directly publish to broker
+  there's no need to subscribe the stream
+  ```go
 	h := &ProduceHandler{
 		AfterSend: func(msg *sarama.ProducerMessage) {
 			log.Print(msg)
@@ -42,15 +39,17 @@ func TestProduce(t *testing.T) {
 	})
 
 	p.Publish()
-}
+  ```
+* Consumer
 
-func TestConsume(t *testing.T) {
+  consumer not have observer thus acting like ovserver to watch broker
+  ```go
 	h := DefaultConsumHandler()
 	h.AtError = func(err error) {
 		log.Print(err)
 	}
 
-	c := NewConsumerGroup("test_group", []string{"127.0.0.1:9092"}, []string{"test"}, h)
+	c := NewConsumerGroup("test_group", []string{"localhost:9092"}, []string{"test"}, h)
 
 	var count int
 	c.Subscribe(func(msg *sarama.ConsumerMessage) {
@@ -60,4 +59,4 @@ func TestConsume(t *testing.T) {
 			c.Cancel()
 		}
 	})
-}
+  ```
