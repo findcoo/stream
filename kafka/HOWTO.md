@@ -2,9 +2,9 @@
 improve kafka's reactivity
 
 * Producer
+
   observer watch the Observable and directly publish to broker
   there's no need to subscribe the stream
-
   ```go
 	h := &ProduceHandler{
 		AfterSend: func(msg *sarama.ProducerMessage) {
@@ -41,8 +41,8 @@ improve kafka's reactivity
 	p.Publish()
   ```
 * Consumer
-  consumer not have observer thus acting like ovserver to watch broker
 
+  consumer not have observer thus acting like ovserver to watch broker
   ```go
 	h := DefaultConsumHandler()
 	h.AtError = func(err error) {
