@@ -13,7 +13,7 @@ type ProceedMessageHandler func(*sarama.ProducerMessage)
 // ProducerStream sarama AsyncProducer를 이용한 stream 구조체
 type ProducerStream struct {
 	stream   chan *sarama.ProducerMessage
-	producer sarama.AsyncProducer
+	Producer sarama.AsyncProducer
 	Observer *stream.Observer
 	Handler  ProduceHandler
 }
@@ -49,7 +49,7 @@ func NewProducerStream(addrs []string, handler *ProduceHandler, obvHandler *stre
 
 	ps := &ProducerStream{
 		stream:   make(chan *sarama.ProducerMessage, 1),
-		producer: p,
+		Producer: p,
 		Observer: stream.NewObserver(obvHandler),
 		Handler:  *handler,
 	}
@@ -71,11 +71,11 @@ SubLoop:
 	for {
 		select {
 		case msg := <-ps.stream:
-			ps.producer.Input() <- msg
+			ps.Producer.Input() <- msg
 			ps.Handler.AfterSend(msg)
-		case <-ps.producer.Successes():
+		case <-ps.Producer.Successes():
 			ps.Observer.WG.Done()
-		case err := <-ps.producer.Errors():
+		case err := <-ps.Producer.Errors():
 			ps.Handler.ErrFrom(err)
 		case <-ps.Observer.DoneSubscribe:
 			break SubLoop

@@ -11,6 +11,10 @@ env:
 services:
  - docker
 
+cache:
+ directories:
+  - $TRAVIS_BUILD_DIR/vendor
+
 before_install:
  - make run.kafka
  - curl https://glide.sh/get | sh

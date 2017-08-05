@@ -55,9 +55,10 @@ func TestConsume(t *testing.T) {
 	var count int
 	c.Subscribe(func(msg *sarama.ConsumerMessage) {
 		log.Printf("offset: %d\n", msg.Offset)
-		count++
 		if count == 10 {
+			c.Consumer.CommitOffsets()
 			c.Cancel()
 		}
+		count++
 	})
 }

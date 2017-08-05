@@ -18,7 +18,7 @@ type (
 // ConsumerGroup sarama cluster를 이용한 consumer
 type ConsumerGroup struct {
 	cancel   chan struct{}
-	consumer *cluster.Consumer
+	Consumer *cluster.Consumer
 	Handler  ConsumHandler
 }
 
@@ -57,7 +57,7 @@ func NewConsumerGroup(groupName string, addrs, topics []string, handler *ConsumH
 
 	cg := &ConsumerGroup{
 		cancel:   make(chan struct{}, 1),
-		consumer: c,
+		Consumer: c,
 		Handler:  *handler,
 	}
 
@@ -75,14 +75,14 @@ func (cg *ConsumerGroup) Subscribe(call ConsumedMessageHandler) {
 SubLoop:
 	for {
 		select {
-		case msg, more := <-cg.consumer.Messages():
-			cg.Handler.AtSubscribe(msg)
+		case msg, more := <-cg.Consumer.Messages():
 			if more {
-				cg.consumer.MarkOffset(msg, "")
+				cg.Consumer.MarkOffset(msg, "")
 			}
-		case err := <-cg.consumer.Errors():
+			cg.Handler.AtSubscribe(msg)
+		case err := <-cg.Consumer.Errors():
 			cg.Handler.AtError(err)
-		case ntf := <-cg.consumer.Notifications():
+		case ntf := <-cg.Consumer.Notifications():
 			cg.Handler.AtNotified(ntf)
 		case <-sig:
 			break SubLoop

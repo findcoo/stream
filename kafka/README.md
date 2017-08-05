@@ -49,14 +49,15 @@ improve kafka's reactivity
 		log.Print(err)
 	}
 
-	c := NewConsumerGroup("test_group", []string{"localhost:9092"}, []string{"test"}, h)
+	c := NewConsumerGroup("test_group", []string{"127.0.0.1:9092"}, []string{"test"}, h)
 
 	var count int
 	c.Subscribe(func(msg *sarama.ConsumerMessage) {
 		log.Printf("offset: %d\n", msg.Offset)
-		count++
 		if count == 10 {
+			c.Consumer.CommitOffsets()
 			c.Cancel()
 		}
+		count++
 	})
   ```
