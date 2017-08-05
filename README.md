@@ -4,6 +4,8 @@
 
 make simple ReactiveX pattern for golang
 
+# Subsets
+* [Kafka](https://github.com/findcoo/stream/tree/master/kafka#kafka)
 
 # Example
 * bytes stream
