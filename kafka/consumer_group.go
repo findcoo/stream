@@ -43,6 +43,7 @@ func NewConsumerGroup(groupName string, addrs, topics []string, handler *ConsumH
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
 	config.Group.Return.Notifications = true
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	if handler == nil {
 		handler = DefaultConsumHandler()
