@@ -22,7 +22,7 @@ type Observer struct {
 	DoneSubscribe chan struct{}
 	doneObserv    chan struct{}
 	Handler       ObservHandler
-	Observable    func()
+	Target        func()
 	WG            sync.WaitGroup
 }
 
@@ -61,7 +61,7 @@ func NewObserver(handler *ObservHandler) *Observer {
 		cancel:        make(chan struct{}, 1),
 		DoneSubscribe: make(chan struct{}, 1),
 		Handler:       *handler,
-		Observable:    func() {},
+		Target:        func() {},
 	}
 
 	return obv
@@ -72,11 +72,11 @@ func (o *Observer) Watch(target func()) {
 	sig := AfterSignal()
 
 	if target != nil {
-		o.Observable = target
+		o.Target = target
 	}
 
 	go func() {
-		go o.Observable()
+		go o.Target()
 
 	ObservLoop:
 		for {

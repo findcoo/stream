@@ -10,21 +10,16 @@ make simple ReactiveX pattern for golang
 # Example
 * bytes stream
   ```go
-	handler := &ObservHandler{
-		AtCancel:   func() {},
-		AtComplete: func() {},
-		AtError:    func(error) {},
-	}
-
-	stream := NewBytesStream(handler)
-	stream.Observer.SetObservable(func() {
+	obv := NewObserver(nil)
+	stream := NewBytesStream(obv)
+	stream.Target = func() {
 		for i := 0; i <= 10; i++ {
 			stream.Send([]byte{byte(i)})
 		}
-		stream.Observer.OnComplete()
-	})
+		stream.OnComplete()
+	}
 
-	stream.Publish().Subscribe(func(data []byte) {
+	stream.Publish(nil).Subscribe(func(data []byte) {
 		log.Print(data)
 	})
   ```

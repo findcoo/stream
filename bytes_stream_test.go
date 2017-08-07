@@ -7,15 +7,9 @@ import (
 )
 
 func TestBytesStream(t *testing.T) {
-	handler := &ObservHandler{
-		AtCancel:   func() {},
-		AtComplete: func() {},
-		AtError:    func(error) {},
-	}
-
-	obv := NewObserver(handler)
+	obv := NewObserver(nil)
 	stream := NewBytesStream(obv)
-	stream.Observable = func() {
+	stream.Target = func() {
 		for i := 0; i <= 10; i++ {
 			stream.Send([]byte{byte(i)})
 		}
@@ -36,7 +30,7 @@ func TestCancel(t *testing.T) {
 
 	obv := NewObserver(handler)
 	stream := NewBytesStream(obv)
-	stream.Observable = func() {
+	stream.Target = func() {
 		for i := 0; i <= 100; i++ {
 			select {
 			case <-stream.AfterCancel():

@@ -10,7 +10,7 @@ import (
 )
 
 func TestProduce(t *testing.T) {
-	obv := stream.NewObserver(stream.DefaultObservHandler())
+	obv := stream.NewObserver(nil)
 	p := NewProducerStream([]string{"localhost:9092"}, obv)
 	p.AfterSend = func(msg *sarama.ProducerMessage) {
 		log.Print(msg)
@@ -22,7 +22,7 @@ func TestProduce(t *testing.T) {
 		log.Print("end produce")
 	}
 
-	p.Observable = func() {
+	p.Target = func() {
 		for i := 0; i <= 10; i++ {
 			msg := &sarama.ProducerMessage{
 				Topic: "test",
