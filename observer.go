@@ -22,7 +22,7 @@ type Observer struct {
 	DoneSubscribe chan struct{}
 	doneObserv    chan struct{}
 	Handler       ObservHandler
-	Observable    StateHandler
+	Target        func()
 	WG            sync.WaitGroup
 }
 
@@ -61,18 +61,22 @@ func NewObserver(handler *ObservHandler) *Observer {
 		cancel:        make(chan struct{}, 1),
 		DoneSubscribe: make(chan struct{}, 1),
 		Handler:       *handler,
-		Observable:    func() {},
+		Target:        func() {},
 	}
 
 	return obv
 }
 
-// Observ 대상 핸들러를 관찰한다.
-func (o *Observer) Observ() {
+// Watch watch the target handler
+func (o *Observer) Watch(target func()) {
 	sig := AfterSignal()
 
+	if target != nil {
+		o.Target = target
+	}
+
 	go func() {
-		go o.Observable()
+		go o.Target()
 
 	ObservLoop:
 		for {
@@ -90,11 +94,6 @@ func (o *Observer) Observ() {
 			}
 		}
 	}()
-}
-
-// SetObservable 감시 대상 함수를 설정한다.
-func (o *Observer) SetObservable(call StateHandler) {
-	o.Observable = call
 }
 
 // OnComplete Observer의 활동을 끝낸다.

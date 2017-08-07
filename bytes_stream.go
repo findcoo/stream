@@ -3,15 +3,15 @@ package stream
 // BytesStream  byte데이터만 흐르는 stream
 type BytesStream struct {
 	stream      chan []byte
-	Observer    *Observer
 	AtSubscribe func(data []byte)
+	*Observer
 }
 
 // NewBytesStream ByteStream 생성
-func NewBytesStream(handler *ObservHandler) *BytesStream {
+func NewBytesStream(obv *Observer) *BytesStream {
 	bs := &BytesStream{
 		stream:   make(chan []byte, 1),
-		Observer: NewObserver(handler),
+		Observer: obv,
 	}
 
 	return bs
@@ -19,13 +19,13 @@ func NewBytesStream(handler *ObservHandler) *BytesStream {
 
 // Send 데이터를 전송한다.
 func (bs *BytesStream) Send(data []byte) {
-	bs.Observer.WG.Add(1)
+	bs.WG.Add(1)
 	bs.stream <- data
 }
 
 // Publish 관찰중인 stream을 발행한다.
-func (bs *BytesStream) Publish() *BytesStream {
-	bs.Observer.Observ()
+func (bs *BytesStream) Publish(target func()) *BytesStream {
+	bs.Watch(target)
 
 	return bs
 }
@@ -39,16 +39,11 @@ func (bs *BytesStream) Subscribe(call func([]byte)) {
 SubLoop:
 	for {
 		select {
-		case <-bs.Observer.DoneSubscribe:
+		case <-bs.DoneSubscribe:
 			break SubLoop
 		case data := <-bs.stream:
 			bs.AtSubscribe(data)
-			bs.Observer.WG.Done()
+			bs.WG.Done()
 		}
 	}
-}
-
-// Cancel Observer Cancel메소드의 프록시 메소드
-func (bs *BytesStream) Cancel() {
-	bs.Observer.Cancel()
 }

@@ -6,21 +6,19 @@ improve kafka's reactivity
   observer watch the Observable and directly publish to broker
   there's no need to subscribe the stream
   ```go
-	h := &ProduceHandler{
-		AfterSend: func(msg *sarama.ProducerMessage) {
-			log.Print(msg)
-		},
-		ErrFrom: func(err error) {
-			log.Print(err)
-		},
+	obv := stream.NewObserver(nil)
+	p := NewProducerStream([]string{"localhost:9092"}, obv)
+	p.AfterSend = func(msg *sarama.ProducerMessage) {
+		log.Print(msg)
 	}
-
-	p := NewProducerStream([]string{"localhost:9092"}, h, nil)
-	p.Observer.Handler.AtComplete = func() {
+	p.ErrFrom = func(err error) {
+		log.Print(err)
+	}
+	p.Handler.AtComplete = func() {
 		log.Print("end produce")
 	}
 
-	p.Observer.SetObservable(func() {
+	p.Target = func() {
 		for i := 0; i <= 10; i++ {
 			msg := &sarama.ProducerMessage{
 				Topic: "test",
@@ -29,16 +27,16 @@ improve kafka's reactivity
 			}
 
 			select {
-			case <-p.Observer.AfterCancel():
+			case <-p.AfterCancel():
 				return
 			default:
 				p.Send(msg)
 			}
 		}
-		p.Observer.OnComplete()
-	})
+		p.OnComplete()
+	}
 
-	p.Publish()
+	p.Publish(nil)
   ```
 * Consumer
 
@@ -55,7 +53,7 @@ improve kafka's reactivity
 	c.Subscribe(func(msg *sarama.ConsumerMessage) {
 		log.Printf("offset: %d\n", msg.Offset)
 		if count == 10 {
-			c.Consumer.CommitOffsets()
+			_ = c.Consumer.CommitOffsets()
 			c.Cancel()
 		}
 		count++
