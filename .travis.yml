@@ -1,26 +1,23 @@
 sudo: required
-
 language: go
-
+addons:
+ apt:
+  sources:
+   - sourceline: 'ppa:masterminds/glide'
+  packages:
+   - glide
 go:
  - 1.8.x
-
 env:
  - DOCKER_COMPOSE_VERSION=1.14.0
-
 services:
  - docker
-
 cache:
  directories:
   - $TRAVIS_BUILD_DIR/vendor
-
 before_install:
  - make run.kafka
- - curl https://glide.sh/get | sh
-
 install: make install
-
 script: 
  - make test
  - go build
