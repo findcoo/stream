@@ -83,6 +83,7 @@ func (o *Observer) Watch(target func()) {
 			select {
 			case state := <-sig:
 				log.Printf("capture signal: %s: end observ", state)
+				o.Handler.AtCancel()
 				o.endSubscribe()
 				return
 			case <-o.doneObserv:
