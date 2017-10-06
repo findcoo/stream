@@ -30,6 +30,21 @@ func (bs *BytesStream) Publish(target func()) *BytesStream {
 	return bs
 }
 
+// Chunk gather data until fill the buffer
+func (bs *BytesStream) Chunk(size int) {
+	data := <-bs.stream
+	dataLength := len(data)
+	chunkSize := int(dataLength / size)
+	surplusSize := dataLength % size
+
+	for i := 0; i < chunkSize; i++ {
+		bs.stream <- data[i : i+size]
+	}
+	if surplusSize > 0 {
+		bs.stream <- data[chunkSize*size:]
+	}
+}
+
 // Subscribe 데이터를 구독
 func (bs *BytesStream) Subscribe(call func([]byte)) {
 	if call != nil {
