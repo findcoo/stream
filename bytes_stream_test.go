@@ -47,3 +47,22 @@ func TestCancel(t *testing.T) {
 		t.Fail()
 	})
 }
+
+func TestChunk(t *testing.T) {
+	stream := NewBytesStream(NewObserver(nil))
+	handler := func() {
+		for i := 0; i <= 100; i++ {
+			select {
+			case <-stream.AfterCancel():
+				return
+			default:
+				stream.Send([]byte(strconv.Itoa(i)))
+			}
+		}
+		stream.OnComplete()
+	}
+
+	stream.Publish(handler).Chunk(5).Subscribe(func(data []byte) {
+		log.Printf("received data: %s", data)
+	})
+}
